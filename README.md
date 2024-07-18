@@ -1,6 +1,6 @@
 # sylvend!!!!
 
-~sylveon, backend, get it? yeah i'm not really good with names~
+<sub>sylveon, backend, get it? yeah i'm not really good with names</sub>
 
 Welcome to the sylvend repository!! This tool was originally meant to be used exclusively for [my website](https://www.papaproductions.cc), but I've decided to make it more modular and release it to the public!!
 
