@@ -2,11 +2,14 @@ const proxy = require("./proxy");
 const Logger = require("./logging");
 const logger = new Logger("people");
 const EventEmitter = require("node:events");
+const { Collection } = require("discord.js");
 
 class PeopleManager extends EventEmitter {
+    #cache;
     constructor(people, client) {
         super();
         this.ready = false;
+        this.cache = new Collection();
         this.people = people;
         this.client = client;
         if(this.client.isReady()) {
@@ -17,7 +20,7 @@ class PeopleManager extends EventEmitter {
     }
     get(name) {
         if(!this.people[name]) return;
-        let user = this.client.users.cache.get(this.people[name]);
+        let user = this.cache.get(this.people[name]);
         if(!user) return;
         return {
             avatar: `/pfps/${name}.webp`,
@@ -26,10 +29,11 @@ class PeopleManager extends EventEmitter {
     }
     
     async reload() {
+        this.client.users.cache.clear();
         logger.log("Reloading people...");
         for(let key of Object.keys(this.people)) {
             let user = await this.client.users.fetch(this.people[key]);
-            this.client.users.cache.set(user.id, user);
+            this.cache.set(user.id, user);
             logger.log(`${key} reloaded. (${user.globalName}, ${user.username}, ${user.id})`);
         }
         let lastReadyVal = this.ready;
@@ -48,7 +52,7 @@ class PeopleManager extends EventEmitter {
                 next();
                 return;
             }
-            let user = this.client.users.cache.get(id);
+            let user = this.cache.get(id);
             if(!user) {
                 res.status(500).send(errorManager.getErrorPage(500, this, "This user is currently not in cache, please try again later."))
                 return;
