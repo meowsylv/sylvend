@@ -1,0 +1,14 @@
+{
+    "people": {},
+    "quotes": [],
+    "errors": {},
+    "templatePath": "/usr/share/sylvend/templates",
+    "managementPath": "/usr/share/sylvend/management",
+    "template": "default",
+    "htmlPath": "/usr/share/sylvend/html",
+    "errorTemplatePath": "/usr/share/sylvend/error.html",
+    "errorPath": "/var/www/html/errors/",
+    "webPath": "/var/www/html/",
+    "fallbackError": "An error has occurred!!!1!",
+    "authRealm": "meowmeowmeowmeowmeowmeowmeowmeowmeow"
+}

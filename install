@@ -1,0 +1,52 @@
+#!/bin/sh
+
+if [ $USER != "root"  ]
+then
+    echo "You must run this script with superuser privileges. Aborting..."
+    exit 1
+fi
+
+echo "#1: Prerequisites"
+if (node --version > /dev/null)
+then
+    echo "> Node.js $(node --version) found"
+else
+    echo "! Node.js was not found. Please install Node.js before proceeding with this installation script. Aborting..."
+    exit 1
+fi
+
+if (npm --version > /dev/null)
+then
+    echo "> npm $(node --version) found"
+else
+    echo "! Couldn't find npm. Please check your PATH. Aborting..."
+    exit 1
+fi
+
+echo "#2: Copying default settings..."
+
+if [ -d /usr/share/sylvend ]
+then
+    echo "/usr/share/sylvend found. Please delete/move this directory if you want to regenerate template and html data."
+else
+    cp -Rv ./default/ /usr/share/sylvend
+fi
+
+
+if [ -d /etc/sylvend ]
+then
+    echo "/etc/sylvend found. Please delete/move this directory if you want to reset sylvend."
+else
+    mv -v /usr/share/sylvend/config /etc/sylvend
+fi
+mkdir -p /var/www/html/errors
+echo "#3: Installing node modules..."
+
+if npm install
+then
+    echo "Done! You can now start sylvend by running 'node .' within its directory. The default user is 'sylv' and its password is 'end'."
+    echo "WARNING: sylvend's default template dir is /var/www/html. If you have anything there, PLEASE BACK IT UP BEFORE RUNNING SYLVEND OR IT WILL BE OVERWRITTEN!!!!"
+else
+    echo "npm error. Aborting..."
+    exit 1
+fi

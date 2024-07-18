@@ -1,0 +1,17 @@
+{
+  "name": "sylvend",
+  "version": "1.2.2",
+  "description": "A website REST API and template manager, made specifically for www.papaproductions.cc",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Kamil Alejandro",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.15.3",
+    "express": "^4.19.2",
+    "node-fetch": "^3.3.2"
+  }
+}

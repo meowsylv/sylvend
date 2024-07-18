@@ -1,0 +1,14 @@
+<title>sylvend management</title>
+---
+<h1>Management!</h1>
+<p>Welcome to the management section! This place can only be accessed by the users listed in the <code>users</code> <code>field in /etc/sylvend/secret.json</code></p>
+
+<p>All users have the following syntax:</p>
+
+<pre><code>{
+    "username": "sylv",
+    "password": "Nh5I0DCPIOMtul+1Yyi68Y1y7wzLQ7hPXCYtKmofxsg=" //SHA256 hash of this user's password.
+}</code></pre>
+
+<p>Another password-protected endpoint is <code>/api/management</code>. This is an api endpoint used to modify sylvend's configuration.</p>
+<p>sylvend does not come with a web management UI by default, you have to make it yourself. Or you can just use <a href="https://github.com/papaproductions/website">the one I made for my website</a>.</p>
