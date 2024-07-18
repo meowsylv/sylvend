@@ -164,7 +164,7 @@ class TemplateManager {
                     contentPath += "index.html";
                 }
                 else {
-                    res.status(301).location(req.url + "/").send(this.errorManager.getErrorPage(301, this.peopleManager, `This is a directory, so it has to have a slash at the end of the path. We're gonna redirect you to the correct path.`));
+                    res.status(301).location(req.originalUrl + "/").send(this.errorManager.getErrorPage(301, this.peopleManager, `This is a directory, so it has to have a slash at the end of the path. We're gonna redirect you to the correct path.`));
                     return;
                 }
             }
