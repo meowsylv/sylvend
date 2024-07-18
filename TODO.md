@@ -3,4 +3,3 @@
 - implement commands
 - better organize the \*Manager classes
 - async methods
-- rework PeopleManager.reload() (PeopleManager.get() occasionally returns undefined cause of the way it's coded)

@@ -160,7 +160,7 @@ class TemplateManager {
             }
             let stats = fs.statSync(contentPath);
             if(stats.isDirectory()) {
-                if(req.url.endsWith("/")) {
+                if(req.originalUrl.endsWith("/")) {
                     contentPath += "index.html";
                 }
                 else {
