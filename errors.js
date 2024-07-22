@@ -39,7 +39,7 @@ class ErrorManager {
     }
     
     getMiddleware(code, peopleManager) {
-        return (req, res, next) => res.status(code).type("text/html").send(this.getErrorPage(code, peopleManager, this.configManager));
+        return (req, res, next) => res.status(code).type("text/html").send(this.getErrorPage(code, peopleManager));
     }
 }
 

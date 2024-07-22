@@ -1,6 +1,6 @@
 {
   "name": "sylvend",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "A website REST API and template manager, made specifically for www.papaproductions.cc",
   "main": "index.js",
   "scripts": {
