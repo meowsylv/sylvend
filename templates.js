@@ -63,7 +63,6 @@ function getPage(content, template, peopleManager, configManager, req, debug = f
             searchIndex = startIndex;
             try {
                 page = methods[methodName]({ params, page, start: startIndex, length: methodLength, replace: methodReplace });
-                logger.log(searchIndex);
             }
             catch(err) {
                 page = methodReplace(page, debug ? log(`Failed to run method '${methodName}'.<br><pre><code>${err.stack}</code></pre>`, "error") : "");
