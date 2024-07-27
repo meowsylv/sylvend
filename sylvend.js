@@ -84,7 +84,7 @@ function init() {
     app.use(rateLimits([
         { methods: ["POST"], path: "/api/suggestions", duration: 15 * 60 * 1000 } //15 minutes.
     ]));
-    app.use("/api/management", auth(configManager, { errorCode: 40100, errorMessage: "Unauthorized." }));
+    app.use("/api/management", auth(configManager, { errorCode: 40100, errorMessage: "Unauthorized." }, user => user.managementAPIAccess));
     app.use("/api", api(configManager, peopleManager, client));
     app.use("/auth", discordAuth(configManager));
     app.use("/management", auth(configManager, errorManager.getErrorPage(401, peopleManager)));

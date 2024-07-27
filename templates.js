@@ -19,13 +19,16 @@ function getPage(content, template, peopleManager, configManager, req, debug = f
         let searchIndex = 0;
         let startIndex = -1;
         let level = 0;
-        let methods = template.initMethods({ package, req, peopleManager, configManager });
+        function resetSearch() {
+            searchIndex = 0;
+        }
+        let methods = template.initMethods({ package, req, peopleManager, configManager, resetSearch });
         while((startIndex = page.indexOf("!{", searchIndex)) !== -1) {
             level = 1;
             let ignore = false;
             searchIndex = startIndex + 1;
             if(page.charAt(startIndex - 1) === "\\" && page.charAt(startIndex - 2) !== "\\") {
-                page = page.slice(0, startIndex - 1) + page.slice(startIndex);
+                //page = page.slice(0, startIndex - 1) + page.slice(startIndex);
                 continue;
             }
             while(level > 0) {
@@ -57,14 +60,15 @@ function getPage(content, template, peopleManager, configManager, req, debug = f
             function methodReplace(page, contents) {
                 return page.slice(0, startIndex) + contents + page.slice(startIndex + methodLength);
             }
+            searchIndex = startIndex;
             try {
                 page = methods[methodName]({ params, page, start: startIndex, length: methodLength, replace: methodReplace });
+                logger.log(searchIndex);
             }
             catch(err) {
                 page = methodReplace(page, debug ? log(`Failed to run method '${methodName}'.<br><pre><code>${err.stack}</code></pre>`, "error") : "");
             }
             lastSearchIndex = -1;
-            searchIndex = startIndex;
         }
         return page;
     }
@@ -168,7 +172,12 @@ class TemplateManager {
                     return;
                 }
             }
-            content = fs.readFileSync(contentPath).toString();
+            try {
+                content = fs.readFileSync(contentPath).toString();
+            }
+            catch {
+                res.status(403).send(this.errorManager.getErrorPage(403));
+            }
             res.type("text/html").send(getPage(content, this.template, this.peopleManager, this.configManager, req));
             
         }
