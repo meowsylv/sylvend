@@ -91,11 +91,11 @@ function init() {
     app.use("/management", management(configManager, templateManager));
     
     app.get("/lgbtq/flags/:flag", async (req, res) => {
-        await proxy(res, `https://en.pronouns.page/flags/${req.params.flag}`);
+        await proxy(res, `https://en.pronouns.page/flags/${req.params.flag}`, errorManager, peopleManager);
     });
     
     app.get("/lgbtq/images/:image", async (req, res) => {
-        await proxy(res, `https://dclu0bpcdglik.cloudfront.net/images/${req.params.image}`);
+        await proxy(res, `https://dclu0bpcdglik.cloudfront.net/images/${req.params.image}`, errorManager, peopleManager);
     });
 
 /*app.get("/pfps/:name", async (req, res) => {

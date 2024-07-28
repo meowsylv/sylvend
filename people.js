@@ -57,7 +57,7 @@ class PeopleManager extends EventEmitter {
                 res.status(500).send(errorManager.getErrorPage(500, this, "This user is currently not in cache, please try again later."))
                 return;
             }
-            proxy(res, user.avatarURL(options), errorManager);
+            proxy(res, user.avatarURL(options), errorManager, this);
         };
     }
 }
