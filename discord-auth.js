@@ -24,7 +24,7 @@ function discordAuth(configManager) {
                 body: querystring.encode({
                     grant_type: "authorization_code",
                     code: req.query.code,
-                    redirect_uri: secret.redirect_uri
+                    redirect_uri: config.redirect_uri
                 })
             })).json();
             res.cookie("access_token", credentials.access_token);
