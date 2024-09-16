@@ -176,6 +176,7 @@ class TemplateManager {
             }
             catch {
                 res.status(403).send(this.errorManager.getErrorPage(403));
+                return;
             }
             res.type("text/html").send(getPage(content, this.template, this.peopleManager, this.configManager, req));
             

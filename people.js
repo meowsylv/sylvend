@@ -47,7 +47,7 @@ class PeopleManager extends EventEmitter {
     
     pfps(options, errorManager) {
         return (req, res, next) => {
-            let id = this.people[req.url.replace(/(^\/)|(\.webp$)/g, "")];
+            let id = this.people[req.path.replace(/(^\/)|(\.webp$)/g, "")];
             if(!id) {
                 next();
                 return;
