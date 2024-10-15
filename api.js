@@ -223,6 +223,8 @@ module.exports = (configManager, peopleManager, client) => {
         res.json(results);
     });
     
+    router.get("/util/timestamp", async (req, res) => res.json({ timestamp: Date.now() }));
+    
     router.post("/suggestions", async (req, res) => {
         if(!req.body?.message || !req.body?.type) {
             res.status(400).json({ errorCode: 40000, errorMessage: "Missing parameters." });
