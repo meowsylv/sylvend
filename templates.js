@@ -169,7 +169,6 @@ class TemplateManager {
             if(templateOverride && !templateOverride.startsWith("..")) {
                 template = new Template(path.join(this.configManager.config.templatePath, templateOverride.split("/")[0]));
             }
-            console.log(template);
             if(stats.isDirectory()) {
                 if(originalPath.endsWith("/")) {
                     contentPath += "index.html";
