@@ -153,7 +153,7 @@ class TemplateManager {
                 return;
             }
             let content;
-            let contentPath = path.join(htmlPath, req.url);
+            let contentPath = path.join(htmlPath, req.path);
             try {
                 fs.accessSync(contentPath);
             }
@@ -162,12 +162,20 @@ class TemplateManager {
                 return;
             }
             let stats = fs.statSync(contentPath);
+            let originalPathEnd = req.originalUrl.search(/[\?|\#]/);
+            let originalPath = req.originalUrl.slice(0, originalPathEnd === -1 ? undefined : originalPathEnd);
+            let template = this.template;
+            let templateOverride = req.query["sylvend-template"];
+            if(templateOverride && !templateOverride.startsWith("..")) {
+                template = new Template(path.join(this.configManager.config.templatePath, templateOverride.split("/")[0]));
+            }
+            console.log(template);
             if(stats.isDirectory()) {
-                if(req.originalUrl.endsWith("/")) {
+                if(originalPath.endsWith("/")) {
                     contentPath += "index.html";
                 }
                 else {
-                    res.status(301).location(req.originalUrl + "/").send(this.errorManager.getErrorPage(301, this.peopleManager, `This is a directory, so it has to have a slash at the end of the path. We're gonna redirect you to the correct path.`));
+                    res.status(301).location(originalPath + "/").send(this.errorManager.getErrorPage(301, this.peopleManager, `This is a directory, so it has to have a slash at the end of the path. We're gonna redirect you to the correct path.`));
                     return;
                 }
             }
@@ -178,7 +186,7 @@ class TemplateManager {
                 res.status(403).send(this.errorManager.getErrorPage(403));
                 return;
             }
-            res.type("text/html").send(getPage(content, this.template, this.peopleManager, this.configManager, req));
+            res.type("text/html").send(getPage(content, template, this.peopleManager, this.configManager, req));
             
         }
     }
