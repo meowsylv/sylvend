@@ -317,6 +317,7 @@ module.exports = (configManager, peopleManager, client) => {
             await webhooks[req.body.type].send({ embeds: [embed] });
         }
         catch(err) {
+            res.cancelRateLimit();
             res.status(500).send({ errorCode: 50003, errorMessage: "Message could not be sent. Discord might be down. Please try again later." });
             logger.log(err);
             return;
