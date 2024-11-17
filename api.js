@@ -39,7 +39,47 @@ module.exports = (configManager, peopleManager, client) => {
         setTimeout(() => restartKeys.slice(restartKeys.indexOf(key), 1), restartTimeout);
         res.json({ key, timeout: restartTimeout });
     });
-
+    
+    router.post("/management/domain-verification/verify", async (req, res) => {
+        if(!req.body?.domain || !req.body?.filename || !req.body?.contents) {
+            res.status(400).json({ errorCode: 40000, errorMessage: "Missing parameters." });
+            return;
+        }
+        else if(req.body.filename.includes("/")) {
+            res.status(400).json({ errorCode: 40001, errorMessage: "Illegal filename." });
+            return;
+        }
+        let rs = await fetch(`http://${req.body.domain}/.well-known/${req.body.filename}`);
+        if(!rs.ok) { 
+            res.json(`Test failed (${res.status} ${res.statusText})`);
+            return;
+        }       
+        if(await rs.text() !== req.body.contents) {
+            res.json(`Test failed (Response body didn't match with expected file contents)`);
+            return;
+        }       
+        res.json("Test passed");
+    });
+    
+    router.put("/management/domain-verification/create/:filename", (req, res) => {
+        if(!req.params?.filename || !req.body?.contents) {
+            res.status(400).json({ errorCode: 40000, errorMessage: "Missing parameters." });
+            return;
+        }
+        else if(req.params.filename.includes("/")) {
+            res.status(400).json({ errorCode: 40001, errorMessage: "Illegal filename." });
+            return;
+        }
+        try {
+            fs.writeFileSync(path.join(configManager.config.domainVerificationPath, req.params.filename), req.body.contents);
+            res.status(204).end();
+        }
+        catch {
+            res.status(500).json({ errorCode: 50000, errorMessage: "File creation failed." });
+            return;
+        }
+    });
+    
     router.post("/management/restart/confirm", (req, res) => {
         if(!req.body?.key) {
             res.status(400).json({ errorCode: 40000, errorMessage: "Missing parameters." });
@@ -273,7 +313,14 @@ module.exports = (configManager, peopleManager, client) => {
                 });
             }
         }
-        await webhooks[req.body.type].send({ embeds: [embed] });
+        try {
+            await webhooks[req.body.type].send({ embeds: [embed] });
+        }
+        catch(err) {
+            res.status(500).send({ errorCode: 50003, errorMessage: "Message could not be sent. Discord might be down. Please try again later." });
+            logger.log(err);
+            return;
+        }
         res.status(204).end();
     });
     
