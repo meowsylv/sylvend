@@ -5,7 +5,7 @@ let rateLimitedIPs = [];
 function rateLimits(rateLimits) {
     return (req, res, next) => {
         let limit;
-        if(limit = rateLimits.find(l => req.path.startsWith(l.path) && l.methods.includes(req.method))) {
+        if(limit = rateLimits.find(l => (typeof l.path === "object" ? (req.path.search(l.path) !== -1) : req.path.startsWith(l.path)) && l.methods.includes(req.method))) {
             logger.log(`Checking for rate limits on ${req.method} ${req.path}...`);
             let rateLimit;
             if(rateLimit = rateLimitedIPs.find(i => i.ip === req.ip)) {

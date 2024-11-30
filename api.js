@@ -1,11 +1,13 @@
 const express = require("express");
 const { WebhookClient, Client, Events, GatewayIntentBits, Embed, EmbedBuilder } = require('discord.js');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const fetch = require("node-fetch");
 const basicAuth = require("./basicAuth");
 const path = require("path");
 const child_process = require("child_process");
 const fs = require("fs");
+const crypto = require("crypto");
 const querystring = require("querystring");
+const mysql = require("mysql");
 const EMBED_FIELD_MAX = 4096;
 const Logger = require("./logging");
 const logger = new Logger("api");
@@ -23,11 +25,87 @@ let keyLength = 32;
 
 module.exports = (configManager, peopleManager, client) => {
     const router = express.Router();
+    const connection = mysql.createConnection(configManager.secret.blog);
     router.use(express.json());
     let webhooks;
     
     router.get("/util/ip", (req, res) => {
         res.json({ ip: req.ip });
+    });
+    
+    router.get("/blog/:postUUID/comments", (req, res) => {
+        connection.query(`SELECT * FROM comments WHERE post_uuid=${mysql.escape(req.params.postUUID)}`, async (error, results) => {
+            if(error) {
+                res.status(500).json({ errorCode: 50000, errorMessage: "Internal Server Error" });
+                logger.log(error);
+                return;
+            }
+            let unorganizedComments = [];
+            for(let rawComment of results) {
+                let { uuid, content, timestamp, parent } = rawComment;
+                let comment = {
+                    uuid, content,
+                    timestamp: timestamp * 1000,
+                    replyTo: parent,
+                    admin: configManager.config.blog.admins.includes(rawComment.author_id)
+                };
+                if(rawComment.author_id) {
+                    let author = client.users.cache.get(rawComment.author_id) || await client.users.fetch(rawComment.author_id);
+                    comment.avatar = `/blog/pfps/${uuid}.${author.avatar.startsWith("a_") ? "gif" : "webp"}`;
+                    comment.author = author.globalName;
+                }
+                unorganizedComments.push(comment);
+            }
+            let comments = unorganizedComments.filter(c => !c.replyTo);
+            organizeComments(unorganizedComments, comments);
+            res.json(comments);
+        });
+    });
+    
+    router.post("/blog/:postUUID/comments", async (req, res) => {
+        if(!req.body?.content && !req.params?.postUUID) {
+            res.status(400).send({ errorCode: 40000, errorMessage: "Missing parameters." });
+            res.cancelRateLimit();
+            return;
+        }
+        
+        let content = req.body.content.toString();
+        
+        if(content.length === 0) {
+            res.status(400).send({ errorCode: 40003, errorMessage: "Cannot send empty comment." });
+            res.cancelRateLimit();
+            return;
+        }
+        
+        if(content.length > 1024) {
+            res.status(400).send({ errorCode: 40002, errorMessage: "Comment length goes above limit." });
+            res.cancelRateLimit();
+            return;
+        }
+        
+        let userReq = await fetch("https://discord.com/api/v10/users/@me", {
+            headers: {
+                "Authorization": req.get("authorization"),
+                "Content-Type": "application/json"
+            }
+        });
+        let user;
+        let uuid = crypto.randomUUID();
+        let comment = { uuid, content, replies: [] };
+        if(userReq.ok) {
+            user = await userReq.json();
+            comment.avatar = `/blog/pfps/${uuid}.${user.avatar.startsWith("a_") ? "gif" : "webp"}`;
+            comment.author = user.global_name;
+        }
+        connection.query(`INSERT INTO comments (uuid, post_uuid, parent, author_id, content, timestamp) VALUES (${mysql.escape(uuid)}, ${mysql.escape(req.params.postUUID)}, ${mysql.escape(req.body.replyTo || "")}, ${mysql.escape(user?.id || "")}, ${mysql.escape(content)}, ${Math.floor(Date.now() / 1000)})`, error => {
+            if(error) {
+                res.status(500).send({ errorCode: 50002, errorMessage: "Failed to post comment." });
+                logger.log(error);
+                res.cancelRateLimit();
+                return;
+            }
+            res.json(comment);
+        });
     });
     
     router.get("/management/restart", (req, res) => {
@@ -188,7 +266,7 @@ module.exports = (configManager, peopleManager, client) => {
         let response = await fetch("https://discord.com/api/v10/oauth2/token/revoke", {
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": basicAuth(configManager.config.client_id, configManager.config.client_secret)
+                "Authorization": basicAuth(configManager.secret.client_id, configManager.secret.client_secret)
             },
             method: "post",
             body: querystring.encode({
@@ -335,4 +413,14 @@ module.exports = (configManager, peopleManager, client) => {
     }
     return router;
 };
+
+function organizeComments(unorganizedComments, comments) {
+    comments.sort((a, b) => b.timestamp - a.timestamp);
+    for(let comment of comments) {
+        let replies = unorganizedComments.filter(c => c.replyTo === comment.uuid);
+        organizeComments(unorganizedComments, replies);
+        comment.replies = replies.sort((a, b) => b.timestamp - a.timestamp);
+    }
+}
+
 logger.ready();

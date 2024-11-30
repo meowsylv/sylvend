@@ -44,6 +44,7 @@ const errorManager = new errors.ErrorManager(configManager, templateManager);
 const Logger = require("./logging");
 const logger = new Logger("main");
 const proxy = require("./proxy");
+const blog = require("./blog");
 client.commands = new Collection();
 
 templateManager.errorManager = errorManager;
@@ -54,7 +55,7 @@ client.once(Events.ClientReady, readyClient => {
 
 client.login(configManager.secret.token);
 
-//just realized how this still goes unused. whatever.
+//just realized that this still goes unused. whatever.
 for(let commandName of commandFiles) {
     let command = require(path.join(commandsPath, commandName));
     client.commands.set(command.data.name, command);
@@ -82,13 +83,16 @@ function init() {
     errorManager.generateErrorPages();
     app.use(global);
     app.use(rateLimits([
-        { methods: ["POST"], path: "/api/suggestions", duration: 15 * 60 * 1000 } //15 minutes.
+        { methods: ["POST"], path: "/api/suggestions", duration: 15 * 60 * 1000 }, //15 minutes.
+        { methods: ["POST"], path: /^\/api\/blog\/.*\/comments/g, duration: 10 * 1000 } //10 seconds.
     ]));
     app.use("/api/management", auth(configManager, { errorCode: 40100, errorMessage: "Unauthorized." }, user => user.managementAPIAccess));
     app.use("/api", api(configManager, peopleManager, client));
     app.use("/auth", discordAuth(configManager));
+    app.use("/blog", blog(client, templateManager, configManager, peopleManager, errorManager));
     app.use("/management", auth(configManager, errorManager.getErrorPage(401, peopleManager)));
     app.use("/management", management(configManager, templateManager));
+    app.use("/.well-known", express.static(configManager.config.domainVerificationPath));
     
     app.get("/lgbtq/flags/:flag", async (req, res) => {
         await proxy(res, `https://en.pronouns.page/flags/${req.params.flag}`, errorManager, peopleManager);

@@ -27,7 +27,10 @@ function discordAuth(configManager) {
                     redirect_uri: config.redirect_uri
                 })
             })).json();
-            res.cookie("access_token", credentials.access_token);
+            res.cookie("access_token", credentials.access_token, {
+                secure: true,
+                domain: req.get("Host")
+            });
             res.type("text/html").send(`<!DOCTYPE html>
 <html>
 <head>
