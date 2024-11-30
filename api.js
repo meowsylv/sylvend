@@ -419,7 +419,7 @@ function organizeComments(unorganizedComments, comments) {
     for(let comment of comments) {
         let replies = unorganizedComments.filter(c => c.replyTo === comment.uuid);
         organizeComments(unorganizedComments, replies);
-        comment.replies = replies.sort((a, b) => b.timestamp - a.timestamp);
+        comment.replies = replies.sort((a, b) => a.timestamp - b.timestamp);
     }
 }
 
