@@ -47,7 +47,7 @@ module.exports = (configManager, peopleManager, databaseManager, client) => {
                 if(rawComment.author_id) {
                     let author = client.users.cache.get(rawComment.author_id) || await client.users.fetch(rawComment.author_id);
                     comment.avatar = `/blog/pfps/${uuid}.${author.avatar.startsWith("a_") ? "gif" : "webp"}`;
-                    comment.author = author.globalName;
+                    comment.author = author.globalName || author.username;
                 }
                 unorganizedComments.push(comment);
             }
