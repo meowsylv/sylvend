@@ -23,9 +23,8 @@ let keyLength = 32;
 
 
 
-module.exports = (configManager, peopleManager, client) => {
+module.exports = (configManager, peopleManager, databaseManager, client) => {
     const router = express.Router();
-    const connection = mysql.createConnection(configManager.secret.blog);
     router.use(express.json());
     let webhooks;
     
@@ -33,13 +32,9 @@ module.exports = (configManager, peopleManager, client) => {
         res.json({ ip: req.ip });
     });
     
-    router.get("/blog/:postUUID/comments", (req, res) => {
-        connection.query(`SELECT * FROM comments WHERE post_uuid=${mysql.escape(req.params.postUUID)}`, async (error, results) => {
-            if(error) {
-                res.status(500).json({ errorCode: 50000, errorMessage: "Internal Server Error" });
-                logger.log(error);
-                return;
-            }
+    router.get("/blog/:postUUID/comments", async (req, res) => {
+        try {
+            let results = await databaseManager.select("comments", { post_uuid: req.params.postUUID });
             let unorganizedComments = [];
             for(let rawComment of results) {
                 let { uuid, content, timestamp, parent } = rawComment;
@@ -59,7 +54,11 @@ module.exports = (configManager, peopleManager, client) => {
             let comments = unorganizedComments.filter(c => !c.replyTo);
             organizeComments(unorganizedComments, comments);
             res.json(comments);
-        });
+        }
+        catch(err) {
+            logger.log(err);
+            res.status(500).json({ errorCode: 50000, errorMessage: "Internal Server Error" });
+        }
     });
     
     router.post("/blog/:postUUID/comments", async (req, res) => {
@@ -97,15 +96,22 @@ module.exports = (configManager, peopleManager, client) => {
             comment.avatar = `/blog/pfps/${uuid}.${user.avatar.startsWith("a_") ? "gif" : "webp"}`;
             comment.author = user.global_name;
         }
-        connection.query(`INSERT INTO comments (uuid, post_uuid, parent, author_id, content, timestamp) VALUES (${mysql.escape(uuid)}, ${mysql.escape(req.params.postUUID)}, ${mysql.escape(req.body.replyTo || "")}, ${mysql.escape(user?.id || "")}, ${mysql.escape(content)}, ${Math.floor(Date.now() / 1000)})`, error => {
-            if(error) {
-                res.status(500).send({ errorCode: 50002, errorMessage: "Failed to post comment." });
-                logger.log(error);
-                res.cancelRateLimit();
-                return;
-            }
+        try {
+            await databaseManager.insert("comments", {
+                uuid,
+                post_uuid: req.params.postUUID,
+                parent: req.body.replyTo,
+                author_id: user?.id,
+                content,
+                timestamp: Math.floor(Date.now() / 1000)
+            });
             res.json(comment);
-        });
+        }
+        catch(err) {
+            res.status(500).send({ errorCode: 50002, errorMessage: "Failed to post comment." });
+            logger.log(err);
+            res.cancelRateLimit();
+        }
     });
     
     router.get("/management/restart", (req, res) => {

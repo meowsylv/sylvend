@@ -2,13 +2,17 @@ const Logger = require("./logging");
 const logger = new Logger("rate-limits");
 let rateLimitedIPs = [];
 
+function comparePaths(search, path) {
+    return (typeof search === "object") ? (path.search(search) !== -1) : path.startsWith(search);
+}
+
 function rateLimits(rateLimits) {
     return (req, res, next) => {
         let limit;
-        if(limit = rateLimits.find(l => (typeof l.path === "object" ? (req.path.search(l.path) !== -1) : req.path.startsWith(l.path)) && l.methods.includes(req.method))) {
+        if(limit = rateLimits.find(l => comparePaths(l.path, req.path) && l.methods.includes(req.method))) {
             logger.log(`Checking for rate limits on ${req.method} ${req.path}...`);
             let rateLimit;
-            if(rateLimit = rateLimitedIPs.find(i => i.ip === req.ip)) {
+            if(rateLimit = rateLimitedIPs.find(l => l.ip === req.ip && comparePaths(l.path, req.path))) {
                 logger.log(`Found rate limit for ${req.ip}.`);
                 if(rateLimit.timestamp + rateLimit.duration > Date.now()) {
                     logger.log(`This rate limit is still active. Access denied.`);
@@ -20,8 +24,8 @@ function rateLimits(rateLimits) {
                     rateLimitedIPs.splice(rateLimitedIPs.indexOf(rateLimit), 1);
                 }
             } 
-            logger.log(`Setting a new ${limit.duration} ms rate limit for ${req.ip}...`);
-            rateLimit = { ip: req.ip, timestamp: Date.now(), duration: limit.duration };
+            logger.log(`Setting a new ${limit.duration}ms rate limit for ${req.ip}...`);
+            rateLimit = { ip: req.ip, timestamp: Date.now(), duration: limit.duration, path: limit.path };
             rateLimitedIPs.push(rateLimit); 
             res.cancelRateLimit = () => {
                 logger.log(`cancelRateLimit() has been called. Removing ${limit.duration} ms rate limit for ${req.ip}...`);

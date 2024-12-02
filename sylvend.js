@@ -34,6 +34,7 @@ const management = require("./management");
 const ConfigManager = require("./config");
 let template;
 const PeopleManager = require("./people");
+const DatabaseManager = require("./database");
 const configManager = new ConfigManager({
     config: "/etc/sylvend/config.json",
     secret: "/etc/sylvend/secret.json"
@@ -41,6 +42,7 @@ const configManager = new ConfigManager({
 const peopleManager = new PeopleManager(configManager.config.people, client);
 const templateManager = new templates.TemplateManager(peopleManager, configManager);
 const errorManager = new errors.ErrorManager(configManager, templateManager);
+const databaseManager = new DatabaseManager(configManager.secret.blog);
 const Logger = require("./logging");
 const logger = new Logger("main");
 const proxy = require("./proxy");
@@ -84,12 +86,12 @@ function init() {
     app.use(global);
     app.use(rateLimits([
         { methods: ["POST"], path: "/api/suggestions", duration: 15 * 60 * 1000 }, //15 minutes.
-        { methods: ["POST"], path: /^\/api\/blog\/.*\/comments/g, duration: 10 * 1000 } //10 seconds.
+        { methods: ["POST"], path: /^\/api\/blog\/.*\/comments/g, duration: 5 * 1000 } //5 seconds.
     ]));
     app.use("/api/management", auth(configManager, { errorCode: 40100, errorMessage: "Unauthorized." }, user => user.managementAPIAccess));
-    app.use("/api", api(configManager, peopleManager, client));
+    app.use("/api", api(configManager, peopleManager, databaseManager, client));
     app.use("/auth", discordAuth(configManager));
-    app.use("/blog", blog(client, templateManager, configManager, peopleManager, errorManager));
+    app.use("/blog", blog(client, templateManager, configManager, peopleManager, errorManager, databaseManager));
     app.use("/management", auth(configManager, errorManager.getErrorPage(401, peopleManager)));
     app.use("/management", management(configManager, templateManager));
     app.use("/.well-known", express.static(configManager.config.domainVerificationPath));

@@ -86,7 +86,7 @@ function loadPage(filename) {
     return fs.readFileSync(path.join(configManager.config.blog.path, filename)).toString();
 }
 
-function blog(client, templateManager, cfg, peopleManager, errorManager) {
+function blog(client, templateManager, cfg, peopleManager, errorManager, databaseManager) {
     configManager = cfg;
     
     if(!configManager.config.blog.atom) {
@@ -100,37 +100,31 @@ function blog(client, templateManager, cfg, peopleManager, errorManager) {
         configManager.update();
     }
     
-    const connection = mysql.createConnection(configManager.secret.blog);
     const router = express.Router();
-    connection.connect();
-    router.get("/pfps/:filename", (req, res) => {
+    router.get("/pfps/:filename", async (req, res, next) => {
         if(!req.params?.filename) {
             res.status(404).send(errorManager.getErrorPage(404, peopleManager));
             return;
         }
         let [ uuid ] = req.params.filename.toString().split(".");
-        connection.query(`SELECT * FROM comments WHERE uuid=${mysql.escape(uuid)}`, async (error, results) => {
-            if(error || results.length > 1) {
-                logger.log(error);
-                res.status(500).send(errorManager.getErrorPage(500, peopleManager, "Failed to fetch comment."));
+        try {
+            let results = await databaseManager.select("comments", { uuid }, ["author_id"]);
+            if(results.length === 0) {
+                next();
                 return;
             }
-            if(results.length === 0 || !results[0].author_id) {
-                res.status(404).send(errorManager.getErrorPage(404, peopleManager));
-                return;
-            }
-            let author = client.users.cache.get(results[0].author_id) || await client.users.fetch(results[0].author_id);
-            proxy(res, author.avatarURL({ size: 128 }), errorManager, peopleManager);
-        });
+            let id = results[0].author_id;
+            let author = client.users.cache.get(id) || await client.users.fetch(id);
+            await proxy(res, author.avatarURL({ size: 128 }), errorManager, peopleManager);
+        }
+        catch(err) {
+            logger.log(err);
+            res.status(500).send(errorManager.getErrorPage(500, peopleManager));
+        }
     });
-    router.get("/rss.xml", (req, res) => {
-         connection.query("SELECT * FROM posts", (error, results, fields) => {
-             if(error) {
-                res.send(errorManager.getErrorPage(503, peopleManager, "Database query failed."));
-                logger.log("Failed to fetch feed");
-                logger.log(error);
-                return;
-            }
+    router.get("/rss.xml", async (req, res) => {
+        try {
+            let results = await databaseManager.select("posts"); 
             let feedData = { ...configManager.config.blog.feed };
             feedData.generator = `${package.name} v${package.version}`;
             feedData.lastBuildDate = new Date().toUTCString();
@@ -141,16 +135,15 @@ ${toXML(feedData)}
 ${results.map(p => toXML(parseRSS(p))).join("\n")}
 </channel>
 </rss>`);
-         });
+        }
+        catch(err) {
+            logger.log(err);
+            res.status(500).send(errorManager.getErrorPage(500, peopleManager));
+        }
     });
-    router.get("/atom.xml", (req, res) => {
-         connection.query("SELECT * FROM posts", (error, results, fields) => {
-             if(error) {
-                res.send(errorManager.getErrorPage(503, peopleManager, "Database query failed."));
-                logger.log("Failed to fetch feed");
-                logger.log(error);
-                return;
-            }
+    router.get("/atom.xml", async (req, res) => {
+        try {
+            let results = await databaseManager.select("posts");
             let feedData = { ...configManager.config.blog.feed, ...configManager.config.blog.atom };
             if(feedData.author) feedData.author = configManager.secret.users.find(u => u.username === feedData.author).atom;
             if(feedData.link) {
@@ -180,17 +173,16 @@ ${results.map(p => toXML(parseRSS(p))).join("\n")}
 ${toXML(feedData)}
 ${results.map(p => toXML(parseAtom(p))).join("\n")}
 </feed>`);
-         });
+        }
+        catch(err) {
+            logger.log(err);
+            res.status(500).send(errorManager.getErrorPage(500, peopleManager));
+        }
     });
-    router.get("/:year/:month/:title", (req, res, next) => {
+    router.get("/:year/:month/:title", async (req, res, next) => {
         let { year, month } = req.params;
-        connection.query("SELECT * FROM posts", (error, results, fields) => {
-            if(error) {
-                res.send({ errorCode: 50303, errorMessage: "Database query failed." });
-                logger.log("Failed to fetch post.");
-                logger.log(error);
-                return;
-            }
+        try {
+            let results = await databaseManager.select("posts");
             let post = results.find(p => {
                 let date = new Date(p.published * 1000);
                 return urlify(date, p.title) === urlify(new Date(year, month - 1, 1), req.params.title);
@@ -200,20 +192,18 @@ ${results.map(p => toXML(parseAtom(p))).join("\n")}
                 return;
             }
             res.send(templates.getPage(replaceKeys(loadPage("post.html"), parsePost(post, req.get("host"))), templateManager.template, peopleManager, configManager, req));
-        });
+        }
+        catch(err) {
+            logger.log(err);
+            res.status(500).send(errorManager.getErrorPage(500, peopleManager));
+        }
     });
-    router.get("/", (req, res) => {
+    router.get("/", async (req, res) => {
         let page = loadPage("index.html");
         let item = loadPage("item.html");
         let feed = "";
-        
-        connection.query("SELECT * FROM posts", (error, results, fields) => {
-            if(error) {
-                res.send({ errorCode: 50303, errorMessage: "Database query failed." });
-                logger.log("Failed to fetch blog.");
-                logger.log(error);
-                return;
-            }
+        try {
+            let results = await databaseManager.select("posts");
             for(let data of results) {
                 feed += replaceKeys(item, parsePost(data, req.get("host")));
             }
@@ -221,9 +211,11 @@ ${results.map(p => toXML(parseAtom(p))).join("\n")}
             page = page.replace(/\{feed\}/g, feed);
         
             res.send(templates.getPage(page, templateManager.template, peopleManager, configManager, req));
-        });
-        
-        
+        }
+        catch(err) {
+            logger.log(err);
+            res.status(500).send(errorManager.getErrorPage(500, peopleManager));
+        }
     });
     return router;
 }
