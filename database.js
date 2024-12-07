@@ -3,29 +3,37 @@ const mysql = require("mysql");
 const logger = new Logger("database");
 
 class DatabaseManager {
+    #credentials;
     constructor(credentials) {
-        this.connection = mysql.createConnection(credentials);
+        this.credentials = credentials;
         logger.log("DatabaseManager initialized.");
-        this.connection.connect((err) => {
-            if(err) {
-                logger.log("Could not connect to database. Aborting...");
-                throw err;
-            }
-            logger.log("DatabaseManager ready.");
-        });
     }
     query(q) {
         return new Promise((resolve, reject) => {
-            logger.log(`Executing query "${q}"...`);
-            this.connection.query(q, (error, results) => {
+            logger.log("Establishing connection with MySQL server...");
+            let connection = mysql.createConnection(this.credentials);
+            connection.connect(error => {
                 if(error) {
+                    logger.log("Failed.");
                     logger.log(error);
                     reject(error);
                     return;
                 }
-                logger.log("Done.");
-                resolve(results);
+                logger.log(`Connected. (user: ${this.credentials.user}, database: ${this.credentials.database})`);
+                logger.log(`Executing query "${q}"...`);
+                connection.query(q, (error, results) => {
+                    if(error) {
+                        logger.log("Failed.");
+                        logger.log(error);
+                        reject(error);
+                        return;
+                    }
+                    logger.log("Done. Disconnecting...");
+                    connection.end();
+                    resolve(results);
+                });
             });
+            
         });
     }
     async insert(table, data) {
