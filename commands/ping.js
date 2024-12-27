@@ -7,7 +7,7 @@ module.exports = {
 	async execute(interaction) {
         let startTimestamp = Date.now();
 		await interaction.reply({ ephemeral: true, content: 'pong.' });
-        await interaction.followUp({ ephemeral: true, content: `Took me ${Date.now() - startTimestamp}ms to send that message.` });
+        await interaction.editReply({ ephemeral: true, content: `pong. took me ${Date.now() - startTimestamp}ms to send that message.` });
 	},
 };
 
