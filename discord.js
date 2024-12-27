@@ -29,7 +29,8 @@ class SylvendClient extends Client {
                 }
                 catch(err) {
                     await interaction[(interaction.deferred || interaction.replied) ? "followUp" : "reply"]({
-                        content: `Failed to execute command. sylvend has logged the error.`
+                        content: `Failed to execute command. sylvend has logged the error.`,
+                        ephemeral: true
                     });
                     logger.log(err);
                 }
