@@ -73,6 +73,7 @@ module.exports = {
 };
 
 function parseSuggestion(embed) {
+    if(!embed) return;
     let { data } = embed;
     console.log(data);
     if(!data?.author) return;
