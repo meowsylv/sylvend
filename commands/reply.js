@@ -23,7 +23,7 @@ module.exports = {
         }
         const modal = new ModalBuilder()
             .setCustomId("reply")
-            .setTitle(`Replying to ${suggestionAuthor.globalName || suggestion.author.username}'s suggestion/bug report`);
+            .setTitle(`Replying to suggestion/bug report`);
         
         const replyInput = new TextInputBuilder()
             .setCustomId("responseInput")
