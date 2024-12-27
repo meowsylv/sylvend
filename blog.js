@@ -157,7 +157,7 @@ ${results.map(p => toXML(parseRSS(p))).join("\n")}
                 };
                 feedData.id = feedData.link.params.href;
             }
-            feedData.updated = new Date(Math.max(results.map(r => r.updated)) * 1000).toISOString();
+            feedData.updated = new Date(Math.max(...results.map(r => r.updated)) * 1000).toISOString();
             feedData.generator = {
                 params: {
                     uri: package.homepage,
@@ -203,7 +203,7 @@ ${results.map(p => toXML(parseAtom(p))).join("\n")}
         let item = loadPage("item.html");
         let feed = "";
         try {
-            let results = await databaseManager.select("posts");
+            let results = (await databaseManager.select("posts")).sort((a, b) => b.published - a.published);
             for(let data of results) {
                 feed += replaceKeys(item, parsePost(data, req.get("host")));
             }
