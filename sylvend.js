@@ -16,14 +16,11 @@ const express = require("express");
 const app = express();
 const api = require("./api");
 const rateLimits = require("./rate-limits.js");
-const { Client, Collection, Events, GatewayIntentBits, Options } = require('discord.js');
+const { SylvendClient, deployCommands } = require("./discord.js");
 const util = require("util");
 const stream = require("stream");
 const commandsPath = path.join(__dirname, "commands");
 const commandFiles = fs.readdirSync(commandsPath);
-const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds],
-});
 const streamPipeline = util.promisify(stream.pipeline);
 const discordAuth = require("./discord-auth");
 const errors = require("./errors");
@@ -39,6 +36,7 @@ const configManager = new ConfigManager({
     config: "/etc/sylvend/config.json",
     secret: "/etc/sylvend/secret.json"
 });
+const client = new SylvendClient(configManager);
 const peopleManager = new PeopleManager(configManager.config.people, client);
 const templateManager = new templates.TemplateManager(peopleManager, configManager);
 const errorManager = new errors.ErrorManager(configManager, templateManager);
@@ -47,24 +45,16 @@ const Logger = require("./logging");
 const logger = new Logger("main");
 const proxy = require("./proxy");
 const blog = require("./blog");
-client.commands = new Collection();
 
 templateManager.errorManager = errorManager;
 
-client.once(Events.ClientReady, readyClient => {
-	logger.log(`Ready! Logged in as ${readyClient.user.tag}`);
-});
-
-client.login(configManager.secret.token);
-
-//just realized that this still goes unused. whatever.
-for(let commandName of commandFiles) {
-    let command = require(path.join(commandsPath, commandName));
-    client.commands.set(command.data.name, command);
-}
-
-
 app.enable("trust proxy");
+
+let argIndex;
+
+if((argIndex = process.argv.indexOf("--deploy-commands")) !== -1) {
+    client.once("ready", () => deployCommands(client, process.argv[argIndex + 1]));
+}
 
 if(process.argv.includes("--wait-for-pplmgr")) {
     peopleManager.once("ready", init);
@@ -120,6 +110,7 @@ function init() {
     app.use("/pfps", peopleManager.pfps({ size: 512 }, errorManager));
     app.use(templateManager.serve(configManager.config.htmlPath));
     app.use(errorManager.getMiddleware(404, peopleManager));
+    app.listen(8001, () => logger.log("Server started!"));
 }
 function setUpTemplate(templateName, save = true) {
     let t = templateName || configManager.config.template;
@@ -134,4 +125,3 @@ function setUpTemplate(templateName, save = true) {
     templateManager.setTemplate(template);
 }
 
-app.listen(8001, () => logger.log("Server started!"));
