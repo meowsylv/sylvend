@@ -41,12 +41,12 @@ module.exports = {
             modalInteraction  = await interaction.awaitModalSubmit({ filter: i => i.customId === "reply", time: 5 * 60 * 1000 });
         }
         catch {
-            interaction.followUp({ ephemeral: true, content: "Timed out." });
+            await interaction.followUp({ ephemeral: true, content: "Timed out." });
             return;
         }
         let response = modalInteraction.fields.getTextInputValue("responseInput");
         try {
-            suggestionAuthor.send({
+            await suggestionAuthor.send({
                 embeds: [
                     {
                         title: "Suggestion response",
