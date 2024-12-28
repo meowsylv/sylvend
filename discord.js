@@ -2,13 +2,16 @@ const Logger = require("./logging");
 const logger = new Logger("discord");
 const path = require("path");
 const fs = require("fs");
-const { Client, Collection, Events, GatewayIntentBits, REST, Routes } = require("discord.js");
+const { Client, Collection, Events, GatewayIntentBits, REST, Routes, WebhookClient } = require("discord.js");
 const commandPath = path.join(__dirname, "commands");
 
+
 class SylvendClient extends Client {
+    static channelTypes = ["suggestion", "bugreport"];
     constructor(configManager) {
         super({ intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent ] });
         this.commands = new Collection();
+        this.webhooks = new Collection();
         this.configManager = configManager;
         let commands = fs.readdirSync(commandPath);
         for(let commandName of commands) {
@@ -20,6 +23,9 @@ class SylvendClient extends Client {
 		        logger.log(`Invalid command module '${commandName}'. Ignoring...`);
             }
         }
+        for(let channel of SylvendClient.channelTypes) {
+            this.webhooks.set(channel, new WebhookClient({ url: configManager.secret.webhooks[channel] }));
+        }
         this.on(Events.InteractionCreate, async interaction => {
             if(interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
                 let command = this.commands.get(interaction.commandName);
@@ -28,11 +34,16 @@ class SylvendClient extends Client {
                     await command.execute(interaction, configManager);
                 }
                 catch(err) {
-                    await interaction[(interaction.deferred || interaction.replied) ? "followUp" : "reply"]({
-                        content: `Failed to execute command. sylvend has logged the error.`,
-                        ephemeral: true
-                    });
                     logger.log(err);
+                    try {
+                        await interaction[(interaction.deferred || interaction.replied) ? "followUp" : "reply"]({
+                            content: `Failed to execute command. sylvend has logged the error.`,
+                            ephemeral: true
+                        });
+                    }
+                    catch {
+                        //too bad
+                    }
                 }
             }
         });

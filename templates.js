@@ -72,8 +72,8 @@ function getPage(content, template, peopleManager, configManager, req, debug = f
         return page;
     }
     catch(err) {
-        console.error("Page generation error.");
-        console.error(err);
+        logger.log("Page generation error.");
+        logger.log(err);
         throw new Error("Page generation error. Please check logs.");
     }
 }

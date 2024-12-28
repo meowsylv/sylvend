@@ -2,6 +2,7 @@ const express = require("express");
 const { WebhookClient, Client, Events, GatewayIntentBits, Embed, EmbedBuilder } = require('discord.js');
 const fetch = require("node-fetch");
 const basicAuth = require("./basicAuth");
+const { SylvendClient } = require("./discord");
 const path = require("path");
 const child_process = require("child_process");
 const fs = require("fs");
@@ -11,7 +12,6 @@ const mysql = require("mysql");
 const EMBED_FIELD_MAX = 4096;
 const Logger = require("./logging");
 const logger = new Logger("api");
-let channelTypes = ["suggestion", "bugreport"]
 let typeNames = {
     "suggestion": "suggestion",
     "bugreport": "bug report"
@@ -26,7 +26,6 @@ let keyLength = 32;
 module.exports = (configManager, peopleManager, databaseManager, client) => {
     const router = express.Router();
     router.use(express.json());
-    let webhooks;
     
     router.get("/util/ip", (req, res) => {
         res.json({ ip: req.ip });
@@ -356,8 +355,7 @@ module.exports = (configManager, peopleManager, databaseManager, client) => {
             return;
         }
         
-        if(!webhooks) loadWebhooks();
-        if(!channelTypes.includes(req.body.type)) {
+        if(!SylvendClient.channelTypes.includes(req.body.type)) {
             res.status(400).json({
                 errorCode: 40001,
                 errorMessage: "Invalid Message Type."
@@ -398,7 +396,7 @@ module.exports = (configManager, peopleManager, databaseManager, client) => {
             }
         }
         try {
-            await webhooks[req.body.type].send({ embeds: [embed] });
+            await client.webhooks.get(req.body.type).send({ embeds: [embed] });
         }
         catch(err) {
             res.cancelRateLimit();
@@ -411,12 +409,6 @@ module.exports = (configManager, peopleManager, databaseManager, client) => {
     
     router.use((req, res, next) => { return res.status(404).json({ errorCode: 40400, errorMessage: "Not Found." }) })
     
-    function loadWebhooks() {
-        webhooks = {};
-        for(let key of channelTypes) {
-            webhooks[key] = new WebhookClient({ url: configManager.secret.webhooks[key] });
-        }
-    }
     return router;
 };
 

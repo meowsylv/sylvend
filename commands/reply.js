@@ -9,6 +9,11 @@ module.exports = {
             await interaction.reply({ ephemeral: true, content: `Only users with the <@&${configManager.config.inboxPermsRoleId}> role may execute this command.` });
             return;
         }
+        let webhook = interaction.client.webhooks.find(w => w.id === interaction.targetMessage.author.id);
+        if(!webhook) {
+            await interaction.reply({ ephemeral: true, content: "You may only run this command on messages sent by suggestion webhooks." });
+            return;
+        }
         let suggestionEmbed = interaction.targetMessage.embeds[0];
         let suggestion = parseSuggestion(suggestionEmbed);
         if(!suggestion) {
@@ -67,6 +72,18 @@ module.exports = {
         }
         catch {
             await modalInteraction.reply({ ephemeral: true, content: "Failed to message suggestion author." });
+            return;
+        }
+        try {
+            if(suggestionEmbed.data.fields[0].value.trim() === "-") {
+                suggestionEmbed.data.fields[0].value = "";
+            }
+            suggestionEmbed.data.fields[0].value += `\n<@${interaction.user.id}> replied to this suggestion <t:${Math.floor(Date.now() / 1000)}:R>`;
+            await webhook.editMessage(interaction.targetMessage, { embeds: [ suggestionEmbed ] });
+        }
+        catch(err) {
+            await modalInteraction.reply({ ephemeral: true, content: "The reply was sent, but the webhook message could not be edited." });
+            return;
         }
         await modalInteraction.reply({ ephemeral: true, content: "Success." });
     }
@@ -75,7 +92,6 @@ module.exports = {
 function parseSuggestion(embed) {
     if(!embed) return;
     let { data } = embed;
-    console.log(data);
     if(!data?.author) return;
     let userId = data.author.name.slice(data.author.name.lastIndexOf("(") + 1, -1).split(", ")[1];
     let content = data.description.slice(2, -2);
