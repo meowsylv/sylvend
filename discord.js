@@ -16,11 +16,11 @@ class SylvendClient extends Client {
         let commands = fs.readdirSync(commandPath);
         for(let commandName of commands) {
             const command = require(path.join(commandPath, commandName));
-            if ('data' in command && 'execute' in command) {
-			    this.commands.set(command.data.name, command);
+            if('data' in command && 'execute' in command) {
+                this.commands.set(command.data.name, command);
 		    }
             else {
-		        logger.log(`Invalid command module '${commandName}'. Ignoring...`);
+                logger.log(`Invalid command module '${commandName}'. Ignoring...`);
             }
         }
         for(let channel of SylvendClient.channelTypes) {
@@ -31,7 +31,7 @@ class SylvendClient extends Client {
                 let command = this.commands.get(interaction.commandName);
                 if(!command) return;
                 try {
-                    await command.execute(interaction, configManager);
+                    await command.execute(interaction, configManager, new Logger(`discord (${interaction.commandName} ${interaction.id})`));
                 }
                 catch(err) {
                     logger.log(err);

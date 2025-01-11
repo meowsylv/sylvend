@@ -2,22 +2,23 @@ const child_process = require("child_process");
 const package = require("./package.json");
 let sylvend;
 let newLine = true;
+let outage = process.argv.includes("--outage");
 
 start();
 
 function start() {
-    log(`Starting ${package.name}...\n`);
-    sylvend = child_process.fork("sylvend.js", process.argv.slice(2), {
+    log(`Starting ${package.name}${outage ? " in outage mode" : ""}...\n`);
+    sylvend = child_process.fork(outage ? "outage.js" : "sylvend.js", process.argv.slice(2), {
         silent: true
     });
     sylvend.stdout.on("data", chunk => {
         let date = new Date();
-        log(chunk, package.name);
+        log(chunk, `${package.name}${outage ? " (outage)" : ""}`);
     });
     
     sylvend.stderr.on("data", chunk => {
         let date = new Date();
-        log(chunk, package.name, true);
+        log(chunk, `${package.name}${outage ? " (outage)" : ""}`, true);
     });
     
     sylvend.on("message", message => {
