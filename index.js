@@ -6,10 +6,20 @@ let outage = process.argv.includes("--outage");
 
 start();
 
+function handleError(code) {
+    let handler = "crash handler";
+    log(`${package.name} has crashed!
+Node.js quit with a non-zero code. A log file has been generated containing the error stack trace. Aborting...\n`, handler, true);
+    process.exit(code);
+}
+
 function start() {
     log(`Starting ${package.name}${outage ? " in outage mode" : ""}...\n`);
     sylvend = child_process.fork(outage ? "outage.js" : "sylvend.js", process.argv.slice(2), {
         silent: true
+    });
+    sylvend.on("close", code => {
+        if(code !== 0) handleError(code);
     });
     sylvend.stdout.on("data", chunk => {
         let date = new Date();

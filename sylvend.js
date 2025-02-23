@@ -1,4 +1,4 @@
-/*sylvend - A custom JS website backend made specifically for www.papaproductions.cc
+/*sylvend - A custom JS website backend made specifically for meow.sylv.cat
 
 Copyright 2024 Kamil Alejandro
 
@@ -10,9 +10,48 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 
 */
 
+const Logger = require("./logging");
+const logger = new Logger("main");
 const fs = require("fs");
+const package = require("./package.json");
+const os = require("os");
 const path = require("path");
+
+process.on("uncaughtExceptionMonitor", (err, origin) => {
+    logger.log("Uncaught exception. Creating log file...");
+    let crashCauses = {
+        "uncaughtException": `${package.name} encountered an error it did not handle.`,
+        "unhandledRejection": `A Promise object rejected with an error, and ${package.name} did not handle it.`
+    };
+    let messages = [
+        "i guess piwate can't make his pfps anymore",
+        "well i hope i didn't push that into the main branch",
+        "buggy ass web server, 0/10 would not recommend",
+        "there's a 50% chance this was caused because I said to myself: \"why wouldn't it work\" and proceeded to push untested code into the main branch",
+        "it's quite the 502 bad gateway evening isn't it",
+        "this log file was likely created 2 hours ago and you just realized, shame on you.",
+        "this really puts the \"end\" in sylvend doesn't it"
+    ];
+    let date = new Date();
+    let data = `${package.name} v${package.version} crash log
+
+Node.js version: ${process.version}
+Date: ${date.toString()}
+Cause: ${origin} (${crashCauses[origin]})
+Stack trace:
+
+${err.stack}
+
+"${messages[Math.floor(Math.random() * messages.length)]}"
+
+- potato
+`;
+    fs.writeFileSync(path.join(os.homedir(), `${package.name}-crash-${[date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds()].map(d => zero(d, 2)).join("-")}.log`), data);
+    logger.log("Done. Aborting...");
+});
+
 const express = require("express");
+const cookieParser = require("cookie-parser");
 const app = express();
 const api = require("./api");
 const rateLimits = require("./rate-limits.js");
@@ -41,8 +80,6 @@ const peopleManager = new PeopleManager(configManager.config.people, client);
 const templateManager = new templates.TemplateManager(peopleManager, configManager);
 const errorManager = new errors.ErrorManager(configManager, templateManager);
 const databaseManager = new DatabaseManager(configManager.secret.blog);
-const Logger = require("./logging");
-const logger = new Logger("main");
 const proxy = require("./proxy");
 const blog = require("./blog");
 
@@ -73,6 +110,7 @@ function init() {
         setUpTemplate("fallback", false);
     }
     errorManager.generateErrorPages();
+    app.use(cookieParser());
     app.use(global);
     app.use(rateLimits([
         { methods: ["POST"], path: "/api/suggestions", duration: 15 * 60 * 1000 }, //15 minutes.
@@ -93,6 +131,12 @@ function init() {
     app.get("/lgbtq/images/:image", async (req, res) => {
         await proxy(res, `https://dclu0bpcdglik.cloudfront.net/images/${req.params.image}`, errorManager, peopleManager);
     });
+    
+    if(configManager.config.tryToBrewCoffee) {
+        app.get("/coffee", (req, res) => {
+            res.status(418).send(errorManager.getErrorPage(418, peopleManager));
+        });
+    }
 
 /*app.get("/pfps/:name", async (req, res) => {
     let id = configManager.config.people[`${req.params.name.replaceAll(".webp", "")}`];
@@ -112,6 +156,12 @@ function init() {
     app.use(errorManager.getMiddleware(404, peopleManager));
     app.listen(8001, () => logger.log("Server started!"));
 }
+
+function zero(n, c) {
+    let length = c - n.toString().length;
+    return `${"0".repeat(length < 0 ? 0 : length)}${n}`;
+}
+
 function setUpTemplate(templateName, save = true) {
     let t = templateName || configManager.config.template;
     template = new templates.Template(path.join(configManager.config.templatePath, t));
