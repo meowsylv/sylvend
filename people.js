@@ -30,7 +30,6 @@ class PeopleManager extends EventEmitter {
     
     async reload() {
         this.client.users.cache.clear();
-        logger.log("Reloading people...");
         for(let key of Object.keys(this.people)) {
             try {
                 let user = await this.client.users.fetch(this.people[key]);
