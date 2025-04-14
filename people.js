@@ -35,7 +35,7 @@ class PeopleManager extends EventEmitter {
             try {
                 let user = await this.client.users.fetch(this.people[key]);
                 this.cache.set(user.id, user);
-                logger.log(`${key} reloaded. (${user.globalName}, ${user.username}, ${user.id})`);
+                //logger.log(`${key} reloaded. (${user.globalName}, ${user.username}, ${user.id})`);
             }
             catch(err) {
                 logger.log(`Failed to reload ${key} (${err.message}).`);
