@@ -2,7 +2,7 @@
 
 <sub>sylveon, backend, get it? yeah i'm not really good with names</sub>
 
-Welcome to the sylvend repository!! This tool was originally meant to be used exclusively for [my website](https://www.papaproductions.cc), but I've decided to make it more modular and release it to the public!!
+Welcome to the sylvend repository!! This tool was originally meant to be used exclusively for [my website](https://meow.sylv.cat/), but I've decided to make it more modular and release it to the public!!
 
 # installation!!
 
@@ -18,4 +18,4 @@ As you probably know, /var/www/html is also the default web directory in some po
 
 # WHAT THE FUCK IS THIS ABOMINATION????
 
-You see, as stated before, this tool was made with my website in mind, so it has a very, VERY specific set of features, so it might be confusing to set up at first, so if you want to see some examples, just check out [my config](https://github.com/papaproductions/website)!!
+You see, as stated before, this tool was made with my website in mind, so it has a very, VERY specific set of features, so it might be confusing to set up at first, so if you want to see some examples, just check out [my config](https://github.com/meowsylv/website)!!
