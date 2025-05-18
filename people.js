@@ -17,6 +17,10 @@ class PeopleManager extends EventEmitter {
             return;
         }
         this.client.once("ready", () => this.reload());
+        this.client.on("shardError", error => {
+            logger.log(`Encountered an error while communicating with the Discord Gateway.
+${error.stack}`);
+        });
     }
     get(name) {
         if(!this.people[name]) return;

@@ -47,6 +47,10 @@ class SylvendClient extends Client {
                 }
             }
         });
+        this.on("shardError", error => {
+            logger.log(`Encountered an error while communicating with the Discord Gateway.
+${error.stack}`);
+        });
         this.login(configManager.secret.token);
     }
 }
