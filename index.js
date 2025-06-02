@@ -1,4 +1,5 @@
 const child_process = require("child_process");
+const path = require("path");
 const package = require("./package.json");
 let sylvend;
 let newLine = true;
@@ -15,7 +16,7 @@ Node.js quit with a non-zero code. A log file has been generated containing the 
 
 function start() {
     log(`Starting ${package.name}${outage ? " in outage mode" : ""}...\n`);
-    sylvend = child_process.fork(outage ? "outage.js" : "sylvend.js", process.argv.slice(2), {
+    sylvend = child_process.fork(path.join(__dirname, outage ? "outage.js" : "sylvend.js"), process.argv.slice(2), {
         silent: true
     });
     sylvend.on("close", code => {
