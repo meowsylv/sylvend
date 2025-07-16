@@ -39,6 +39,7 @@ function auth(configManager, errorPage, condition) {
         if(condition && !condition(user)) {
             logger.log("condition() returned false. Rejecting...");
             rejectAuth(res, errorPage, config, false);
+            return;
         }
         logger.log(`Authorization successful. Access granted.`);
         next();
