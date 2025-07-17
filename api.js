@@ -303,7 +303,7 @@ module.exports = (configManager, peopleManager, databaseManager, client) => {
     });
     
     router.get("/cow", (req, res) => {
-        child_process.exec("env", { env: process.platform === "linux" ? {...process.env, "PATH": "/usr/games:" + (process.env.PATH || "")} : process.env }, (error, stdout, stderr) => {
+        child_process.exec("fortune | cowsay", { env: process.platform === "linux" ? {...process.env, "PATH": "/usr/games:" + (process.env.PATH || "")} : process.env }, (error, stdout, stderr) => {
             if(error) {
                 res.status(500).json({ errorCode: "50000", errorMessage: "Failed to run command." });
                 return;
