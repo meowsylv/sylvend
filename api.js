@@ -31,6 +31,15 @@ module.exports = (configManager, peopleManager, databaseManager, client) => {
         res.json({ ip: req.ip });
     });
     
+    router.get("/blog/:uuid", async (req, res) => {
+        let results = await databaseManager.select("posts", { uuid: req.params.uuid });
+        if(!results[0]) {
+            res.status(404).json({ errorCode: 40401, errorMessage: "No such post." });
+            return;
+        }
+        res.json(results[0]);
+    });
+    
     router.get("/blog/:postUUID/comments", async (req, res) => {
         try {
             let results = await databaseManager.select("comments", { post_uuid: req.params.postUUID });
@@ -110,6 +119,42 @@ module.exports = (configManager, peopleManager, databaseManager, client) => {
             res.status(500).send({ errorCode: 50002, errorMessage: "Failed to post comment." });
             logger.log(err);
             res.cancelRateLimit();
+        }
+    });
+
+    router.post("/management/blog", async (req, res) => {
+        if(!req.body || !req.body.content || !req.body.title || !req.body.thumb) {
+            res.status(400).send({ errorCode: 40000, errorMessage: "Missing parameters." });
+            return;
+        }
+        let { title, content, contributors, thumb } = req.body;
+        let timestamp = Math.floor(Date.now() / 1000);
+        let author;
+        let auth = req.get("Authorization");
+        try {
+            if(auth?.startsWith("Basic")) {
+                let data = auth.replace(/^Basic /, "");
+                if(!data.includes(":")) {
+                    data = Buffer.from(data, "base64").toString();
+                }   
+                author = data.split(":")[0];
+            }
+        }
+        catch { /* no auth ig */ }
+        try {
+            let data = {
+                uuid: crypto.randomUUID(),
+                title, content, thumb, author,
+                published: timestamp,
+                updated: timestamp,
+                contributors: contributors || ""
+            };
+            await databaseManager.insert("posts", data);
+            res.json(data);
+        }
+        catch(err) {
+            logger.log(err);
+            res.status(500).json({ errorCode: 500, errorMessage: "Internal Server Error." });
         }
     });
     
@@ -258,7 +303,7 @@ module.exports = (configManager, peopleManager, databaseManager, client) => {
     });
     
     router.get("/cow", (req, res) => {
-        child_process.exec("fortune | cowsay", (error, stdout, stderr) => {
+        child_process.exec("fortune | cowsay", { env: process.platform === "linux" ? {"PATH": "/usr/games:" + (process.env.PATH || ""), ...process.env} : process.env }, (error, stdout, stderr) => {
             if(error) {
                 res.status(500).json({ errorCode: "50000", errorMessage: "Failed to run command." });
                 return;
