@@ -10,10 +10,10 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 
 */
 
-const Logger = require("./logging");
+const Logger = loadModule("logging");
 const logger = new Logger("main");
 const fs = require("fs");
-const package = require("./package.json");
+const package = loadModule("package.json");
 const os = require("os");
 const path = require("path");
 
@@ -53,24 +53,24 @@ ${err.stack}
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const app = express();
-const api = require("./api");
-const rateLimits = require("./rate-limits.js");
-const { SylvendClient, deployCommands } = require("./discord.js");
+const api = loadModule("api");
+const rateLimits = loadModule("rate-limits.js");
+const { SylvendClient, deployCommands } = loadModule("discord.js");
 const util = require("util");
 const stream = require("stream");
 const commandsPath = path.join(__dirname, "commands");
 const commandFiles = fs.readdirSync(commandsPath);
 const streamPipeline = util.promisify(stream.pipeline);
-const discordAuth = require("./discord-auth");
-const errors = require("./errors");
-const auth = require("./auth");
-const templates = require("./templates");
-const global = require("./global");
-const management = require("./management");
-const ConfigManager = require("./config");
+const discordAuth = loadModule("discord-auth");
+const errors = loadModule("errors");
+const auth = loadModule("auth");
+const templates = loadModule("templates");
+const global = loadModule("global");
+const management = loadModule("management");
+const ConfigManager = loadModule("config");
 let template;
-const PeopleManager = require("./people");
-const DatabaseManager = require("./database");
+const PeopleManager = loadModule("people");
+const DatabaseManager = loadModule("database");
 const configManager = new ConfigManager({
     config: "/etc/sylvend/config.json",
     secret: "/etc/sylvend/secret.json"
@@ -80,8 +80,8 @@ const peopleManager = new PeopleManager(configManager.config.people, client);
 const templateManager = new templates.TemplateManager(peopleManager, configManager);
 const errorManager = new errors.ErrorManager(configManager, templateManager);
 const databaseManager = new DatabaseManager(configManager.secret.blog);
-const proxy = require("./proxy");
-const blog = require("./blog");
+const proxy = loadModule("proxy");
+const blog = loadModule("blog");
 
 templateManager.errorManager = errorManager;
 
@@ -105,23 +105,27 @@ function init() {
         setUpTemplate();
     }
     catch(err) {
-        console.error(err);
+        logger.log(err);
         logger.log("Failed to load template. No files will be updated. Loading fallback...");
         setUpTemplate("fallback", false);
     }
     errorManager.generateErrorPages();
     app.use(cookieParser());
     app.use(global);
-    app.use(rateLimits([
-        { methods: ["POST"], path: "/api/suggestions", duration: 15 * 60 * 1000 }, //15 minutes.
-        { methods: ["POST"], path: /^\/api\/blog\/.*\/comments/g, duration: 5 * 1000 } //5 seconds.
-    ]));
-    app.use("/api/management", auth(configManager, { errorCode: 40100, errorMessage: "Unauthorized." }, user => user.managementAPIAccess));
-    app.use("/api", api(configManager, peopleManager, databaseManager, client));
-    app.use("/auth", discordAuth(configManager));
-    app.use("/blog", blog(client, templateManager, configManager, peopleManager, errorManager, databaseManager));
-    app.use("/management", auth(configManager, errorManager.getErrorPage(401, peopleManager)));
-    app.use("/management", management(configManager, templateManager));
+    if(rateLimits) {
+        app.use(rateLimits([
+            { methods: ["POST"], path: "/api/suggestions", duration: 15 * 60 * 1000 }, //15 minutes.
+            { methods: ["POST"], path: /^\/api\/blog\/.*\/comments/g, duration: 5 * 1000 } //5 seconds.
+        ]));
+    }
+    if(auth) {
+        app.use("/api/management", auth(configManager, { errorCode: 40100, errorMessage: "Unauthorized." }, user => user.managementAPIAccess));
+        app.use("/management", auth(configManager, errorManager.getErrorPage(401, peopleManager)));
+    }
+    if(api) app.use("/api", api(configManager, peopleManager, databaseManager, client));
+    if(discordAuth) app.use("/auth", discordAuth(configManager));
+    if(blog) app.use("/blog", blog(client, templateManager, configManager, peopleManager, errorManager, databaseManager));
+    if(management) app.use("/management", management(configManager, templateManager));
     app.use("/.well-known", express.static(configManager.config.domainVerificationPath));
     
     app.get("/lgbtq/flags/:flag", async (req, res) => {
@@ -129,7 +133,7 @@ function init() {
     });
     
     app.get("/lgbtq/images/:image", async (req, res) => {
-        await proxy(res, `https://dclu0bpcdglik.cloudfront.net/images/${req.params.image}`, errorManager, peopleManager);
+        await proxy(res, `https://cdn.pronouns.page/images/${req.params.image}`, errorManager, peopleManager);
     });
     
     if(configManager.config.tryToBrewCoffee) {
@@ -155,6 +159,19 @@ function init() {
     app.use(templateManager.serve(configManager.config.htmlPath));
     app.use(errorManager.getMiddleware(404, peopleManager));
     app.listen(8001, () => logger.log("Server started!"));
+}
+
+function loadModule(name) {
+    if(process.argv.includes(`--disable-${name}`)) {
+        if(["logging", "global", "config"].includes(name)) {
+            (name === "logging" ? console : logger).log(`${name} cannot be disabled. Argument ignored.`);
+        }
+        else {
+            logger.log(`WARNING: ${name} has been disabled, and therefore sylvend will not load it. THIS MIGHT BREAK SOME OTHER ACTIVE MODULE AND CAUSE A CRASH!!`);
+            return;
+        }
+    }
+    return require(`./${name}`);
 }
 
 function zero(n, c) {
